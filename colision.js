@@ -15,8 +15,11 @@ this.originalColor = color; // Guardar el color original
 this.color = color;
 this.text = text;
 this.speed = speed;
-this.dx = 1 * this.speed;
-this.dy = 1 * this.speed;
+this.dx = Math.random() < 0.5 ? speed : -speed; // Direcciones aleatorias iniciales
+this.dy = Math.random() < 0.5 ? speed : -speed;
+//this.collided = false; // Estado de colisión
+this.isFlashing = false; // Estado de flasheo
+this.flashDuration = 0; // Duración del flasheo
 }
 draw(context) {
 context.beginPath();
@@ -46,6 +49,16 @@ update(context) {
     if (this.posY + this.radius > window_height || this.posY - this.radius < 0) {
     this.dy = -this.dy;
     }
+
+    // Gestionar el flasheo   
+if (this.isFlashing) {
+    this.flashDuration--;
+                if (this.flashDuration <= 0) { 
+                this.isFlashing = false; // Dejar de flashear
+                    this.color = this.originalColor; // Regresar al color original
+                }
+            }
+
     }
 
     // Función para detectar si colisiona con otro círculo
@@ -56,7 +69,25 @@ isCollidingWith(otherCircle) {
     return distance < this.radius + otherCircle.radius;
     }
 
+    // Método para iniciar el flasheo
+startFlashing(duration) {
+        this.isFlashing = true; // Activar estado de flasheo
+        this.flashDuration = duration; // Establecer duración del flasheo
+        this.color = "#0000FF"; // Cambiar a color azul
     }
+    
+// Método para invertir la dirección de movimiento
+bounce() {
+    this.dx = -this.dx; // Invertir dirección en X
+    this.dy = -this.dy; // Invertir dirección en Y
+}
+
+// Actualizar el estado de colisión
+resetCollision() {
+        this.collided = false; // Resetear estado al final de la actualización
+    }
+
+}
     // Crear un array para almacenar N círculos
     let circles = [];
     // Función para generar círculos aleatorios
@@ -72,32 +103,39 @@ function generateCircles(n) {
     }
     }
 
-    // Función para verificar y manejar colisiones
+ // Función para verificar y manejar colisiones
+
 function checkCollisions() {
     // Recorrer todos los círculos
     for (let i = 0; i < circles.length; i++) {
-    let circleA = circles[i];
-    let inCollision = false;
-    // Comparar con el resto de los círculos
-    for (let j = 0; j < circles.length; j++) {
-    if (i !== j) { // No compararse consigo mismo
-        let circleB = circles[j];     
-        if (circleA.isCollidingWith(circleB)) {
-                inCollision = true;        
-                break; // Si ya colisionó con uno, no es necesario seguir buscando
+        let circleA = circles[i];
+        for (let j = 0; j < circles.length; j++) {
+            if (i !== j) { // No compararse consigo mismo
+let circleB = circles[j];
+                
+if (circleA.isCollidingWith(circleB)) {
+                    circleA.bounce(circleB); // Cambiar dirección de ambos círculos
+                    circleA.color = "#0000FF"; // Cambiar color de A al colisionar
+                    circleB.color = "#0000FF"; // Cambiar color de B al colisionar
+                    circleA.collided = true; // Marcar como colisionado
+                    circleB.collided = true; // Marcar como colisionado
+                    circleA.startFlashing(50); // Iniciar flasheo en A
+                    circleB.startFlashing(50); // Iniciar flasheo en B
+                }
             }
         }
     }
-    // Cambiar color si está en colisión
-    if (inCollision) {
-        circleA.color = "#0000FF"; // Azul cuando colisiona
-            }        
-    else {circleA.color = circleA.originalColor; // Regresa al color original cuando no hay colisión
-            }
-     
-            
-    }
-    }
+
+    
+                
+// Devolver al color original si no colisiona
+    circles.forEach(circle => {
+if (!circle.collided) {
+            circle.color = circle.originalColor; // Regresa al color original
+        }
+        circle.resetCollision(); // Resetear el estado de colisión
+    });
+}
 
   
     // Función para animar los círculos
@@ -106,7 +144,6 @@ function checkCollisions() {
     checkCollisions();
     circles.forEach(circle => {
     circle.update(ctx); // Actualizar cada círculo
-    
     });
     requestAnimationFrame(animate); // Repetir la animación
     }
